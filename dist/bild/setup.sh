@@ -1,4 +1,4 @@
-#!/bin/bash
+@#!/bin/bash
 # ============================================================
 # Setup-Skript fuer Raspberry Pi 5
 # Installiert alle nötigen Pakete fuer HC-SR04 + 1602 I2C LCD

@@ -58,9 +58,9 @@ echo.direction = digitalio.Direction.INPUT
 
 
 def messe_entfernung():
-    """
-    Misst die Entfernung mit dem HC-SR04 Sensor.
+    """Misst die Entfernung mit dem HC-SR04 Sensor.
     Gibt die Entfernung in cm zurueck oder -1 bei Timeout.
+    Verwendet time.monotonic() fuer robuste Zeitmessung.
     """
     # Trigger-Puls senden (10µs HIGH)
     trig.value = True
@@ -68,15 +68,17 @@ def messe_entfernung():
     trig.value = False
 
     # Warten bis Echo HIGH wird (Start der Messung)
-    timeout_start = time.time()
-    while echo.value is False:
-        puls_start = time.time()
+    timeout_start = time.monotonic()
+    puls_start = timeout_start
+    while not echo.value:
+        puls_start = time.monotonic()
         if puls_start - timeout_start > 0.1:  # Timeout 100ms
             return -1
 
     # Warten bis Echo LOW wird (Ende der Messung)
-    while echo.value is True:
-        puls_ende = time.time()
+    puls_ende = puls_start
+    while echo.value:
+        puls_ende = time.monotonic()
         if puls_ende - puls_start > 0.1:  # Timeout 100ms
             return -1
 
