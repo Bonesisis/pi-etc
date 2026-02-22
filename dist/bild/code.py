@@ -72,14 +72,14 @@ def messe_entfernung():
     puls_start = timeout_start
     while not echo.value:
         puls_start = time.monotonic()
-        if puls_start - timeout_start > 0.1:  # Timeout 100ms
+        if puls_start - timeout_start > 0.1:
             return -1
 
     # Warten bis Echo LOW wird (Ende der Messung)
     puls_ende = puls_start
     while echo.value:
         puls_ende = time.monotonic()
-        if puls_ende - puls_start > 0.1:  # Timeout 100ms
+        if puls_ende - puls_start > 0.1:
             return -1
 
     # Entfernung berechnen

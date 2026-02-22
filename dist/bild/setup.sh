@@ -33,3 +33,6 @@ echo ""
 echo "Falls das LCD nicht funktioniert:"
 echo "  - Pruefe ob eine Adresse bei i2cdetect angezeigt wird"
 echo "  - Falls 0x3F statt 0x27: Aendere LCD_I2C_ADDR in code.py"
+
+
+für u
