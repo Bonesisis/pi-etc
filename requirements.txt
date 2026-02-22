@@ -1,2 +1,2 @@
-adafruit-blinka
-adafruit-circuitpython-charlcd
+RPLCD
+smbus2

@@ -23,16 +23,14 @@ Hinweis: I2C muss aktiviert sein:
 """
 
 import time
-import board
-import busio
-import digitalio
-from adafruit_character_lcd.character_lcd_i2c import Character_LCD_I2C
+import lgpio
+from RPLCD.i2c import CharLCD
 
 # ============================================================
 # Konfiguration
 # ============================================================
-TRIG_PIN = board.D23          # GPIO 23 fuer Trigger
-ECHO_PIN = board.D24          # GPIO 24 fuer Echo
+TRIG_PIN = 23                 # GPIO 23 fuer Trigger
+ECHO_PIN = 24                 # GPIO 24 fuer Echo
 LCD_COLUMNS = 16              # 1602 = 16 Spalten
 LCD_ROWS = 2                  # 1602 = 2 Zeilen
 LCD_I2C_ADDR = 0x27           # Standard-Adresse (manchmal 0x3F)
@@ -43,18 +41,16 @@ SCHALLGESCHWINDIGKEIT = 34300  # cm/s bei ~20°C
 # Hardware-Initialisierung
 # ============================================================
 
-# --- I2C & LCD ---
-i2c = busio.I2C(board.SCL, board.SDA)
-lcd = Character_LCD_I2C(i2c, LCD_COLUMNS, LCD_ROWS, address=LCD_I2C_ADDR)
-lcd.backlight = True
+# --- LCD (PCF8574-basiert) ---
+lcd = CharLCD(i2c_expander='PCF8574', address=LCD_I2C_ADDR,
+              port=1, cols=LCD_COLUMNS, rows=LCD_ROWS,
+              dotsize=8, auto_linebreaks=True)
+lcd.backlight_enabled = True
 
-# --- Ultraschall-Sensor (HC-SR04) ---
-trig = digitalio.DigitalInOut(TRIG_PIN)
-trig.direction = digitalio.Direction.OUTPUT
-trig.value = False
-
-echo = digitalio.DigitalInOut(ECHO_PIN)
-echo.direction = digitalio.Direction.INPUT
+# --- GPIO (lgpio direkt) ---
+h = lgpio.gpiochip_open(0)
+lgpio.gpio_claim_output(h, TRIG_PIN)
+lgpio.gpio_claim_input(h, ECHO_PIN)
 
 
 def messe_entfernung():
@@ -63,21 +59,21 @@ def messe_entfernung():
     Verwendet time.monotonic() fuer robuste Zeitmessung.
     """
     # Trigger-Puls senden (10µs HIGH)
-    trig.value = True
+    lgpio.gpio_write(h, TRIG_PIN, 1)
     time.sleep(0.00001)  # 10 Mikrosekunden
-    trig.value = False
+    lgpio.gpio_write(h, TRIG_PIN, 0)
 
     # Warten bis Echo HIGH wird (Start der Messung)
     timeout_start = time.monotonic()
     puls_start = timeout_start
-    while not echo.value:
+    while lgpio.gpio_read(h, ECHO_PIN) == 0:
         puls_start = time.monotonic()
         if puls_start - timeout_start > 0.1:
             return -1
 
     # Warten bis Echo LOW wird (Ende der Messung)
     puls_ende = puls_start
-    while echo.value:
+    while lgpio.gpio_read(h, ECHO_PIN) == 1:
         puls_ende = time.monotonic()
         if puls_ende - puls_start > 0.1:
             return -1
@@ -90,18 +86,25 @@ def messe_entfernung():
 
 
 def zeige_auf_lcd(entfernung):
-    """Zeigt die Entfernung auf dem LCD-Display an."""
-    lcd.clear()
-    lcd.cursor_position(0, 0)
-    lcd.message = "Entfernung:"
+    """Zeigt die Entfernung auf dem LCD-Display an.
+    Ueberschreibt die Zeilen direkt (kein lcd.clear()),
+    damit das Display nicht flackert/blinkt.
+    """
+    # Zeile 1: immer "Entfernung:"
+    zeile1 = "Entfernung:".ljust(LCD_COLUMNS)
 
-    lcd.cursor_position(0, 1)
+    # Zeile 2: Messwert
     if entfernung < 0:
-        lcd.message = "Kein Signal!"
+        zeile2 = "Kein Signal!".ljust(LCD_COLUMNS)
     elif entfernung > 400:
-        lcd.message = "Ausser Reichweite"
+        zeile2 = "Ausser Reichw.".ljust(LCD_COLUMNS)
     else:
-        lcd.message = f"{entfernung} cm"
+        zeile2 = f"{entfernung} cm".ljust(LCD_COLUMNS)
+
+    lcd.cursor_pos = (0, 0)
+    lcd.write_string(zeile1)
+    lcd.cursor_pos = (1, 0)
+    lcd.write_string(zeile2)
 
 
 def main():
@@ -114,7 +117,9 @@ def main():
 
     # Begruessung auf LCD
     lcd.clear()
-    lcd.message = "Entfernungs-\nmessung aktiv!"
+    lcd.write_string("Entfernungs-")
+    lcd.cursor_pos = (1, 0)
+    lcd.write_string("messung aktiv!")
     time.sleep(2)
 
     try:
@@ -133,10 +138,13 @@ def main():
     except KeyboardInterrupt:
         print("\nProgramm beendet.")
         lcd.clear()
-        lcd.message = "Programm\nbeendet!"
+        lcd.write_string("Programm")
+        lcd.cursor_pos = (1, 0)
+        lcd.write_string("beendet!")
         time.sleep(1)
         lcd.clear()
-        lcd.backlight = False
+        lcd.backlight_enabled = False
+        lgpio.gpiochip_close(h)
 
 
 if __name__ == "__main__":
