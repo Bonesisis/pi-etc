@@ -35,4 +35,21 @@ echo "  - Pruefe ob eine Adresse bei i2cdetect angezeigt wird"
 echo "  - Falls 0x3F statt 0x27: Aendere LCD_I2C_ADDR in code.py"
 
 
-für u
+LCD Display (1602 I2C):
+
+LCD Pin	Pi Pin
+VCC	5V (Pin 2 oder 4)
+GND	GND (Pin 6, 9 oder 14)
+SDA	GPIO 2 / SDA (Pin 3)
+SCL	GPIO 3 / SCL (Pin 5)
+HC SR04 Ultraschall Sensor:
+
+Sensor Pin	Pi Pin
+VCC	5V (Pin 2 oder 4)
+GND	GND (Pin 6)
+TRIG	GPIO 23 (Pin 16)
+ECHO	GPIO 24 (Pin 18) – über Spannungsteiler!
+Wichtig beim ECHO‑Pin: Der HC SR04 gibt 5V aus, der Pi verträgt nur 3.3V. Du brauchst einen Spannungsteiler:
+
+1kΩ Widerstand zwischen ECHO und GPIO 24
+2kΩ Widerstand zwischen GPIO 24 und GND
